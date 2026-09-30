@@ -1,8 +1,8 @@
-#!/usr/bin/env/python3
+#!/usr/bin/env python3
 # This Python file uses the following encoding: utf-8
 
 # ===== #
-#   
+#
 # ▀█████████▄     ▄████████         Websites: HackingPassion.com | Bullseye0.com
 #   ███    ███   ███    ███         Author: Jolanda de Koff | Bulls Eye
 #   ███    ███   ███    █▀          GitHub: https://github.com/BullsEye0
@@ -17,7 +17,7 @@
 
 # ===== #
 # Created April | Copyright (c) 2020 - 2026 Jolanda de Koff.
-# Updated May 2026 - Multi Search Engine
+# Updated September 2026 - Multi Search Engine
 # ===== #
 
 ########################################################################
@@ -37,13 +37,9 @@ except ImportError:
     print("[!] Install with: pip install ddgs\n")
     exit(1)
 
-try:
-    from googlesearch import search as google_search
-except ImportError:
-    google_search = None
-
 import sys
 import time
+import webbrowser
 import requests
 from bs4 import BeautifulSoup
 import urllib.parse
@@ -72,7 +68,7 @@ banner = ("""
     ░ ▒  ▒   ░ ▒ ▒░   ░▒ ░ ▒░░ ░▒ ▒░░ ░▒  ░ ░    ░ ░  ░▓██ ░▒░  ░ ░  ░
     ░ ░  ░ ░ ░ ░ ▒    ░░   ░ ░ ░░ ░ ░  ░  ░        ░   ▒ ▒ ░░     ░
     ░        ░ ░     ░     ░  ░         ░        ░  ░░ ░        ░  ░
-    ░                                                  ░ ░  v2.0 """)
+    ░                                                  ░ ░  v3.0 """)
 
 
 for col in banner:
@@ -124,23 +120,13 @@ def bing(dork, amount):
     return results
 
 
-def google(dork, amount):
-    results = []
-    if google_search is None:
-        print("[!] Google: googlesearch-python not installed")
-        return results
-    
-    try:
-        count = 0
-        for result in google_search(dork):
-            results.append(result)
-            count += 1
-            if count >= amount:
-                break
-            time.sleep(1)
-    except Exception as e:
-        print(f"[!] Google: {str(e)}")
-    return results
+def google(dork):
+    url = "https://www.google.com/search?q=" + urllib.parse.quote_plus(dork)
+    print("[~] Google blocks searches from scripts, so the search opens in your browser.")
+    print(f"[+]  {url}")
+    if not webbrowser.open_new_tab(url):
+        print("[!] No browser found. Open the link above yourself.")
+    return url
 
 
 def brave(dork, amount):
@@ -149,26 +135,26 @@ def brave(dork, amount):
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept-Encoding': 'gzip, deflate'
     }
-    
+
     try:
         query = urllib.parse.quote_plus(dork)
         url = f"https://search.brave.com/search?q={query}"
-        
+
         response = requests.get(url, headers=headers, timeout=10)
         soup = BeautifulSoup(response.text, 'html.parser')
-        
+
         links = soup.find_all('a')
-        
+
         for link in links[:amount * 3]:
             href = link.get('href')
             if href and href.startswith('http') and 'brave.com' not in href:
                 results.append(href)
                 if len(results) >= amount:
                     break
-                
+
     except Exception as e:
         print(f"[!] Brave: {str(e)}")
-    
+
     return results
 
 
@@ -177,24 +163,24 @@ def yandex(dork, amount):
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     }
-    
+
     try:
         query = urllib.parse.quote_plus(dork)
         url = f"https://yandex.com/search/?text={query}"
-        
+
         response = requests.get(url, headers=headers, timeout=10)
         soup = BeautifulSoup(response.text, 'html.parser')
-        
+
         links = soup.find_all('a', attrs={'class': 'Link'})
-        
+
         for link in links[:amount]:
             href = link.get('href')
             if href and href.startswith('http') and 'yandex' not in href:
                 results.append(href)
-                
+
     except Exception as e:
         print(f"[!] Yandex: {str(e)}")
-    
+
     return results
 
 
@@ -203,8 +189,6 @@ def search_engine(engine, dork, amount):
         return duckduckgo(dork, amount)
     elif engine == "bing":
         return bing(dork, amount)
-    elif engine == "google":
-        return google(dork, amount)
     elif engine == "brave":
         return brave(dork, amount)
     elif engine == "yandex":
@@ -218,13 +202,13 @@ try:
     print ("[~] Choose Your Search Engine:\n")
     print ("[1] DuckDuckGo - Reliable, privacy-focused")
     print ("[2] Bing - Reliable, fast results")
-    print ("[3] Google - Often blocked due to bot detection (YMMV)")
+    print ("[3] Google - Opens in your browser")
     print ("[4] Brave Search - Privacy-focused, independent index")
     print ("[5] Yandex - Reliable, different results")
     print ("[6] ALL")
-    
+
     engine_choice = input("\n[+] Select Option (1-6): ").strip()
-    
+
     data = input("[+] Do You Like To Save The Output In A File? (Y/N) ").strip()
     l0g = ("")
 
@@ -275,24 +259,32 @@ def dorks():
             engines = [("DuckDuckGo", "duckduckgo")]
 
         counter = 0
-        
+
         for engine_name, engine_type in engines:
             print(f"\n[•] Searching {engine_name}...\n")
-            
+
+            if engine_type == "google":
+                url = google(dork)
+                if data.lower().startswith("y"):
+                    logger(f"Google: {url}")
+                if len(engines) > 1:
+                    time.sleep(2)
+                continue
+
             results = search_engine(engine_type, dork, amount)
-            
+
             if results:
                 for result in results:
                     counter += 1
                     print(f"[+]  {counter} {result}")
-                    
+
                     if data.lower().startswith("y"):
                         logger(f"{counter} {result}")
-                    
+
                     time.sleep(0.1)
             else:
                 print(f"[!] No results from {engine_name}")
-            
+
             if len(engines) > 1:
                 time.sleep(2)
 
